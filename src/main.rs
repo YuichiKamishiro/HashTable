@@ -4,10 +4,10 @@ use std::{fmt::Debug};
 struct TestMap<K, V> {
     containers: u32,
     taken: u32,
-    map: Vec<Option<(K, V)>>,
+    buckets: Vec<Vec<(K, V)>>,
 }
 
-impl<K: Default + Debug + Copy, V: Default + Copy> TestMap<K, V> {
+impl<K: Default + Debug + Copy + Eq, V: Default + Copy + Eq> TestMap<K, V> {
     fn hash(str: &str) -> u32 {
         let mut hash: u32 = 2166136261;
 
@@ -23,31 +23,44 @@ impl<K: Default + Debug + Copy, V: Default + Copy> TestMap<K, V> {
         TestMap {
             containers: 10,
             taken: 0,
-            map: vec![Default::default(); 10]
+            buckets: vec![Default::default(); 10]
         }
     }
 
     fn insert(&mut self, key: K, val: V ) {
         let hash = Self::hash(&format!("{:?}", key));
         let index: u32 = hash % self.containers;
-        
-        self.map[index as usize] = Some((key, val));
+
+        let bucket =&mut self.buckets[index as usize];
+        for (k, v) in bucket.iter_mut() {
+            if k == &key {
+                *v = val;
+                return;
+            }
+        }
+        bucket.push((key, val));
     }
 
     fn get(&self, key: K) -> Option<V> {
         let hash = Self::hash(&format!("{:?}", key));
         let index: u32 = hash % self.containers;
-        println!("hash {hash}, index {index}");
-        if let Some(k) = self.map[index as usize] {
-            return Some(k.1)
-        } 
+
+        let bucket = &self.buckets[index as usize];
+
+        for (k, v) in bucket.iter() {
+            if *k == key {
+                return Some(*v);
+            }
+        }
+        
         None
     }
 }
 
 fn main() {
-    let mut m = TestMap::new();
+    let mut m: TestMap<&str, &str> = TestMap::new();
     m.insert("hello", "world");
-    println!("{:?}", m.get("hello"));
-    println!("{:?}", m.get("hell1"));
+    m.insert("hello1", "world");
+    println!("{:?}, ", m.get("hello"));
+    println!("{:?}, ", m.get("hel2lo"));
 }
